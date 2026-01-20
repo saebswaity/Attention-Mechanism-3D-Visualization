@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attention Mechanism</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/DragControls.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%);
+      color: white; 
+      overflow: hidden;
+    }
+    
+    #container { width: 100vw; height: 100vh; }
+    
+    .glass {
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+    }
+    
+    #panel {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      padding: 28px;
+      width: 320px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+    }
+    
+    h1 {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 8px;
+    }
+    
+    .formula {
+      font-size: 15px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 28px;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 4px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 14px;
+      margin-bottom: 20px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .tab.active {
+      background: rgba(255,255,255,0.12);
+      color: white;
+    }
+    
+    .sentence {
+      padding: 16px;
+      background: rgba(0,0,0,0.25);
+      border-radius: 14px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      line-height: 2;
+    }
+    
+    .word-tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 2px;
+    }
+    
+    .slider-section { margin-bottom: 28px; }
+    
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 14px;
+    }
+    
+    .slider-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.6);
+    }
+    
+    .slider-value {
+      font-size: 32px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(135deg, #a78bfa, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.08);
+      outline: none;
+      -webkit-appearance: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #a78bfa, #818cf8);
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(167, 139, 250, 0.5);
+    }
+    
+    .slider-hint {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: rgba(255,255,255,0.3);
+      margin-top: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .calc-btn {
+      width: 100%;
+      padding: 18px;
+      border: none;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #a78bfa 0%, #818cf8 100%);
+      color: white;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 32px rgba(129, 140, 248, 0.35);
+    }
+    
+    .calc-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(129, 140, 248, 0.45);
+    }
+    
+    .reset-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      background: transparent;
+      color: rgba(255,255,255,0.5);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .reset-btn:hover {
+      background: rgba(255,255,255,0.05);
+      color: white;
+    }
+    
+    .positions {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 14px;
+    }
+    
+    .positions-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 12px;
+    }
+    
+    .pos-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 12px;
+      font-family: monospace;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .pos-item:last-child { border-bottom: none; }
+    
+    .pos-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    
+    .pos-name {
+      width: 50px;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .pos-coords {
+      flex: 1;
+      color: rgba(255,255,255,0.5);
+    }
+    
+    .pos-change {
+      color: #4ade80;
+      font-size: 10px;
+    }
+    
+    .note {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(167, 139, 250, 0.1);
+      border-radius: 10px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.5;
+    }
+    
+    .note strong {
+      color: #a78bfa;
+    }
+    
+    #help {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      padding: 18px 22px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      line-height: 1.7;
+    }
+    
+    #help span { color: rgba(255,255,255,0.7); }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  
+  <div id="panel" class="glass">
+    <h1>Attention Mechanism</h1>
+    <div class="formula">softmax(XᵀX + α·diag(XᵀX))·X</div>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="setContext('fruit')">🍎 Fruit</button>
+      <button class="tab" onclick="setContext('tech')">📱 Tech</button>
+    </div>
+    
+    <div class="sentence" id="sentenceDisplay"></div>
+    
+    <div class="slider-section">
+      <div class="slider-header">
+        <span class="slider-label">Dampening α</span>
+        <span class="slider-value" id="alphaVal">0.00</span>
+      </div>
+      <input type="range" id="alpha" min="-3" max="3" step="0.1" value="0">
+      <div class="slider-hint">
+        <span>Self-attention</span>
+        <span>Context mixing</span>
+      </div>
+    </div>
+    
+    <button class="calc-btn" onclick="calculateAttention()">Calculate Attention</button>
+    <button class="reset-btn" onclick="resetPositions()">Reset Positions</button>
+    
+    <div class="positions">
+      <div class="positions-title">Word Positions</div>
+      <div id="positionsList"></div>
+    </div>
+    
+    <div class="note">
+      <strong>Note:</strong> "apple" starts at same position in both contexts. After attention, it moves toward different word clusters!
+    </div>
+  </div>
+  
+  <div id="help" class="glass">
+    <span>Drag</span> spheres to move vectors<br>
+    <span>Scroll</span> to zoom • <span>Drag</span> space to rotate
+  </div>
+
+  <script>
+    let scene, camera, renderer, orbitControls, dragControls;
+    let spheres = {}, arrows = {}, labelSprites = [], attentionLines = [];
+    let ghostSpheres = {};
+    let alpha = 0, ctx = 'fruit';
+    let animating = false;
+    let startPositions = {};
+    
+    const wordColors = {
+      apple:  { hex: '#ff6b6b', three: 0xff6b6b },
+      orange: { hex: '#ffa94d', three: 0xffa94d },
+      banana: { hex: '#ffe066', three: 0xffe066 },
+      iPhone: { hex: '#74c0fc', three: 0x74c0fc },
+      Mac:    { hex: '#b197fc', three: 0xb197fc }
+    };
+    
+    // ALL POSITIVE VALUES - apple same in both!
+    const APPLE_POSITION = [2, 2, 2];
+    
+    const initialData = {
+      fruit: {
+        apple:  { p: [...APPLE_POSITION] },  // Same position
+        orange: { p: [3.5, 3, 1] },             // Fruit cluster - high X,Y
+        banana: { p: [4, 1, 2] }
+      },
+      tech: {
+        apple:  { p: [...APPLE_POSITION] },  // Same position
+        iPhone: { p: [2, 1, 3] },             // Tech cluster - high Y,Z
+        Mac:    { p:  [1, 3, .1]}
+      }
+    };
+    
+    let data = JSON.parse(JSON.stringify(initialData));
+    
+    const sentences = {
+      fruit: ['I', 'ate', 'apple', 'orange', 'banana'],
+      tech: ['Apple', 'released', 'iPhone', 'Mac']
+    };
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x08081a);
+      
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+      camera.position.set(14, 10, 14);
+      
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      document.getElementById('container').appendChild(renderer.domElement);
+      
+      orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+      orbitControls.enableDamping = true;
+      orbitControls.dampingFactor = 0.05;
+      
+      scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+      
+      const light1 = new THREE.PointLight(0xffffff, 0.8);
+      light1.position.set(10, 10, 10);
+      scene.add(light1);
+      
+      const light2 = new THREE.PointLight(0x818cf8, 0.4);
+      light2.position.set(-10, 5, -10);
+      scene.add(light2);
+      
+      // Grid
+      const grid = new THREE.GridHelper(10, 10, 0x252545, 0x1a1a35);
+      grid.rotation.x = Math.PI / 2;
+      scene.add(grid);
+      
+      // Origin
+      const originGeo = new THREE.SphereGeometry(0.15, 32, 32);
+      scene.add(new THREE.Mesh(originGeo, new THREE.MeshBasicMaterial({ color: 0x444466 })));
+      
+      // Axes - only positive direction
+      createAxis([8,0,0], 0xff6666, 'X');
+      createAxis([0,8,0], 0x66ff66, 'Y');
+      createAxis([0,0,8], 0x6666ff, 'Z');
+      
+      document.getElementById('alpha').oninput = e => {
+        alpha = parseFloat(e.target.value);
+        document.getElementById('alphaVal').textContent = alpha.toFixed(2);
+      };
+      
+      window.onresize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      };
+      
+      updateSentenceDisplay();
+      buildScene();
+      updatePositionsDisplay();
+      animate();
+    }
+    
+    function createAxis(to, color, label) {
+      const geo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0,0,0), new THREE.Vector3(...to)
+      ]);
+      scene.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 })));
+      
+      // Label
+      const canvas = document.createElement('canvas');
+      canvas.width = 64; canvas.height = 64;
+      const c = canvas.getContext('2d');
+      c.fillStyle = '#' + color.toString(16).padStart(6, '0');
+      c.font = 'bold 48px Inter';
+      c.fillText(label, 20, 48);
+      const tex = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex }));
+      sprite.position.set(to[0] * 1.1, to[1] * 1.1, to[2] * 1.1);
+      sprite.scale.set(0.8, 0.8, 1);
+      scene.add(sprite);
+    }
+    
+    function createArrow(from, to, color) {
+      const group = new THREE.Group();
+      
+      const dir = new THREE.Vector3(to[0]-from[0], to[1]-from[1], to[2]-from[2]);
+      const length = dir.length();
+      if (length < 0.1) return group;
+      dir.normalize();
+      
+      const shaftLength = Math.max(0.1, length - 0.4);
+      const shaftGeo = new THREE.CylinderGeometry(0.06, 0.06, shaftLength, 16);
+      const shaftMat = new THREE.MeshStandardMaterial({ 
+        color, emissive: color, emissiveIntensity: 0.3, metalness: 0.5, roughness: 0.3
+      });
+      const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+      shaft.position.y = shaftLength / 2;
+      group.add(shaft);
+      
+      const headGeo = new THREE.ConeGeometry(0.18, 0.5, 16);
+      const head = new THREE.Mesh(headGeo, new THREE.MeshStandardMaterial({ 
+        color, emissive: color, emissiveIntensity: 0.4, metalness: 0.5, roughness: 0.3
+      }));
+      head.position.y = shaftLength + 0.2;
+      group.add(head);
+      
+      group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      group.position.set(from[0], from[1], from[2]);
+      
+      return group;
+    }
+    
+    function makeLabel(text, color) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512; canvas.height = 128;
+      const c = canvas.getContext('2d');
+      c.fillStyle = color;
+      c.font = 'bold 72px Inter, sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(text, 256, 64);
+      
+      const tex = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+      sprite.scale.set(2.5, 0.6, 1);
+      return sprite;
+    }
+    
+    function updateSentenceDisplay() {
+      const words = sentences[ctx];
+      document.getElementById('sentenceDisplay').innerHTML = words.map(word => {
+        const key = word.toLowerCase() === 'apple' ? 'apple' : word;
+        const colorInfo = wordColors[key];
+        if (colorInfo) {
+          return `<span class="word-tag" style="background:${colorInfo.hex}20; color:${colorInfo.hex}; border: 1px solid ${colorInfo.hex}40">${word}</span>`;
+        }
+        return `<span style="color: rgba(255,255,255,0.4)">${word}</span>`;
+      }).join(' ');
+    }
+    
+    function updatePositionsDisplay() {
+      const d = data[ctx];
+      document.getElementById('positionsList').innerHTML = Object.keys(d).map(word => {
+        const color = wordColors[word].hex;
+        const p = d[word].p;
+        const start = startPositions[word];
+        let changeHtml = '';
+        if (start) {
+          const dist = Math.sqrt(
+            Math.pow(p[0]-start[0], 2) + 
+            Math.pow(p[1]-start[1], 2) + 
+            Math.pow(p[2]-start[2], 2)
+          );
+          if (dist > 0.01) {
+            changeHtml = `<span class="pos-change">Δ ${dist.toFixed(2)}</span>`;
+          }
+        }
+        return `<div class="pos-item">
+          <div class="pos-dot" style="background:${color}"></div>
+          <span class="pos-name">${word}</span>
+          <span class="pos-coords">[${p[0].toFixed(1)}, ${p[1].toFixed(1)}, ${p[2].toFixed(1)}]</span>
+          ${changeHtml}
+        </div>`;
+      }).join('');
+    }
+    
+    function buildScene() {
+      Object.values(spheres).forEach(s => scene.remove(s));
+      Object.values(arrows).forEach(a => scene.remove(a));
+      Object.values(ghostSpheres).forEach(g => scene.remove(g));
+      labelSprites.forEach(l => scene.remove(l));
+      attentionLines.forEach(l => scene.remove(l));
+      
+      spheres = {}; arrows = {}; ghostSpheres = {}; labelSprites = []; attentionLines = [];
+      startPositions = {};
+      
+      if (dragControls) dragControls.dispose();
+      
+      const d = data[ctx];
+      const draggable = [];
+      
+      Object.keys(d).forEach(word => {
+        const info = d[word];
+        const color = wordColors[word];
+        
+        // Arrow
+        const arrow = createArrow([0,0,0], info.p, color.three);
+        scene.add(arrow);
+        arrows[word] = arrow;
+        
+        // Sphere
+        const geo = new THREE.SphereGeometry(0.28, 32, 32);
+        const mat = new THREE.MeshStandardMaterial({
+          color: color.three, emissive: color.three, emissiveIntensity: 0.4, metalness: 0.3, roughness: 0.4
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(...info.p);
+        mesh.userData = { word };
+        scene.add(mesh);
+        spheres[word] = mesh;
+        draggable.push(mesh);
+        
+        // Glow
+        const glowGeo = new THREE.SphereGeometry(0.45, 32, 32);
+        const glow = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ color: color.three, transparent: true, opacity: 0.15 }));
+        glow.position.set(...info.p);
+        mesh.userData.glow = glow;
+        scene.add(glow);
+        
+        // Label
+        const label = makeLabel(word, color.hex);
+        label.position.set(info.p[0], info.p[1] + 0.8, info.p[2]);
+        label.userData = { word };
+        scene.add(label);
+        labelSprites.push(label);
+      });
+      
+      // Drag controls
+      dragControls = new THREE.DragControls(draggable, camera, renderer.domElement);
+      dragControls.addEventListener('dragstart', () => orbitControls.enabled = false);
+      dragControls.addEventListener('dragend', () => orbitControls.enabled = true);
+      dragControls.addEventListener('drag', e => {
+        const word = e.object.userData.word;
+        const pos = [e.object.position.x, e.object.position.y, e.object.position.z];
+        data[ctx][word].p = pos;
+        
+        scene.remove(arrows[word]);
+        arrows[word] = createArrow([0,0,0], pos, wordColors[word].three);
+        scene.add(arrows[word]);
+        
+        if (e.object.userData.glow) e.object.userData.glow.position.copy(e.object.position);
+        
+        const label = labelSprites.find(l => l.userData.word === word);
+        if (label) label.position.set(pos[0], pos[1] + 0.8, pos[2]);
+        
+        updatePositionsDisplay();
+      });
+      
+      updatePositionsDisplay();
+    }
+    
+    function softmax(arr) {
+      const max = Math.max(...arr);
+      const exp = arr.map(x => Math.exp(x - max));
+      const sum = exp.reduce((a,b) => a+b);
+      return exp.map(x => x/sum);
+    }
+    
+    function dot(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+    
+    function calculateAttention() {
+      if (animating) return;
+      
+      const d = data[ctx];
+      const words = Object.keys(d);
+      const n = words.length;
+      const pos = words.map(w => [...d[w].p]);
+      
+      // Save start positions
+      words.forEach((w, i) => startPositions[w] = [...pos[i]]);
+      
+      // Ghost spheres at original positions
+      Object.values(ghostSpheres).forEach(g => scene.remove(g));
+      ghostSpheres = {};
+      words.forEach((word, i) => {
+        const geo = new THREE.SphereGeometry(0.2, 16, 16);
+        const mat = new THREE.MeshBasicMaterial({ 
+          color: wordColors[word].three, 
+          transparent: true, 
+          opacity: 0.3,
+          wireframe: true
+        });
+        const ghost = new THREE.Mesh(geo, mat);
+        ghost.position.set(...pos[i]);
+        scene.add(ghost);
+        ghostSpheres[word] = ghost;
+      });
+      
+      // XᵀX + α·diag
+      const scores = [];
+      for (let i = 0; i < n; i++) {
+        const row = [];
+        for (let j = 0; j < n; j++) {
+          row.push(dot(pos[i], pos[j]));
+        }
+        scores.push(row);
+      }
+      
+      for (let i = 0; i < n; i++) {
+        scores[i][i] += alpha * scores[i][i];
+      }
+      
+      const attn = scores.map(row => softmax(row));
+      
+      console.log('Attention matrix:');
+      words.forEach((w, i) => {
+        console.log(`${w}: ${words.map((w2, j) => `${w2}=${(attn[i][j]*100).toFixed(1)}%`).join(', ')}`);
+      });
+      
+      // New positions for ALL words
+      const newPos = [];
+      for (let i = 0; i < n; i++) {
+        const out = [0, 0, 0];
+        for (let j = 0; j < n; j++) {
+          for (let k = 0; k < 3; k++) {
+            out[k] += attn[i][j] * pos[j][k];
+          }
+        }
+        newPos.push(out);
+      }
+      
+      animateToPositions(words, pos, newPos, attn);
+    }
+    
+    function animateToPositions(words, startPos, endPos, attn) {
+      animating = true;
+      const duration = 1500;
+      const startTime = performance.now();
+      
+      attentionLines.forEach(l => scene.remove(l));
+      attentionLines = [];
+      
+      function update() {
+        const elapsed = performance.now() - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        
+        words.forEach((word, i) => {
+          const x = startPos[i][0] + (endPos[i][0] - startPos[i][0]) * ease;
+          const y = startPos[i][1] + (endPos[i][1] - startPos[i][1]) * ease;
+          const z = startPos[i][2] + (endPos[i][2] - startPos[i][2]) * ease;
+          
+          spheres[word].position.set(x, y, z);
+          if (spheres[word].userData.glow) spheres[word].userData.glow.position.set(x, y, z);
+          data[ctx][word].p = [x, y, z];
+          
+          scene.remove(arrows[word]);
+          arrows[word] = createArrow([0,0,0], [x,y,z], wordColors[word].three);
+          scene.add(arrows[word]);
+          
+          const label = labelSprites.find(l => l.userData.word === word);
+          if (label) label.position.set(x, y + 0.8, z);
+        });
+        
+        // Attention lines
+        attentionLines.forEach(l => scene.remove(l));
+        attentionLines = [];
+        
+        words.forEach((word, i) => {
+          words.forEach((other, j) => {
+            if (i !== j && attn[i][j] > 0.1) {
+              const p1 = spheres[word].position;
+              const p2 = spheres[other].position;
+              const mid = new THREE.Vector3(
+                (p1.x + p2.x) / 2,
+                (p1.y + p2.y) / 2 + 0.8,
+                (p1.z + p2.z) / 2
+              );
+              const curve = new THREE.QuadraticBezierCurve3(p1.clone(), mid, p2.clone());
+              const points = curve.getPoints(20);
+              const geo = new THREE.BufferGeometry().setFromPoints(points);
+              const mat = new THREE.LineBasicMaterial({
+                color: wordColors[word].three,
+                transparent: true,
+                opacity: attn[i][j] * ease * 0.7
+              });
+              const line = new THREE.Line(geo, mat);
+              scene.add(line);
+              attentionLines.push(line);
+            }
+          });
+        });
+        
+        updatePositionsDisplay();
+        
+        if (t < 1) {
+          requestAnimationFrame(update);
+        } else {
+          animating = false;
+        }
+      }
+      
+      update();
+    }
+    
+    function resetPositions() {
+      data = JSON.parse(JSON.stringify(initialData));
+      attentionLines.forEach(l => scene.remove(l));
+      attentionLines = [];
+      Object.values(ghostSpheres).forEach(g => scene.remove(g));
+      ghostSpheres = {};
+      startPositions = {};
+      buildScene();
+    }
+    
+    function setContext(c) {
+      ctx = c;
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      attentionLines.forEach(l => scene.remove(l));
+      attentionLines = [];
+      Object.values(ghostSpheres).forEach(g => scene.remove(g));
+      ghostSpheres = {};
+      startPositions = {};
+      
+      updateSentenceDisplay();
+      buildScene();
+    }
+    
+    function animate() {
+      requestAnimationFrame(animate);
+      orbitControls.update();
+      renderer.render(scene, camera);
+    }
+    
+    init();
+  </script>
+</body>
+</html>
